@@ -1,0 +1,8 @@
+#!/bin/bash
+
+g++ -Wall -c -I. example.cpp -o example.o
+g++ -c -I. nifti1_io.c -o nifti1_io.o
+g++ -c -I. znzlib.c -o znzlib.o
+
+g++ *.o -o example
+
