@@ -1,8 +1,51 @@
 #!/bin/bash
 
-g++ -Wall -c -I. example.cpp -o example.o
-g++ -c -I. nifti1_io.c -o nifti1_io.o
-g++ -c -I. znzlib.c -o znzlib.o
+if [ $# != 1 ]; then
+  echo usage: ./build target
+  exit 1
+fi
 
-g++ *.o -o example
+
+# termiate script on error:
+set -e
+
+
+function check_need_update {
+  dest="$1"
+  # target exists?
+  [ -f "$dest" ] || return 0
+  shift 1
+  # target older than dependencies?
+  for n in $@; do
+    [ "$dest" -ot "$n" ] && return 0
+  done
+  # so target is up to date
+  return 1
+}
+
+
+function compile {
+  echo "[CC]" g++ -Wall -c -I. "$1" -o "${1%.*}.o"
+  g++ -Wall -c -I. "$1" -o "${1%.*}.o"
+}
+
+
+
+function link {
+  echo "[LD]" g++ *.o -o "$1"
+  g++ *.o -o "$1"
+}
+  
+
+
+# first argument is target executable:
+target="$1"
+
+# compile all C/C++ files into objects first:
+for cpp in *.cpp *.c; do
+  check_need_update ${cpp%.*}.o $cpp && compile "$cpp"
+done
+
+# link all objects into target:
+check_need_update "$target" *.o && link "$target"
 
