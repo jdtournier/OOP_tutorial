@@ -25,7 +25,7 @@ int main (int argc, char* argv[])
     out.save (argv[2]);
   }
   catch (std::string& message) {
-    std::cerr << message << std::endl;
+    std::cerr << "\nERROR: " << message << std::endl;
     return 1;
   }
 
