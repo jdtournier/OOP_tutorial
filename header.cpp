@@ -2,8 +2,9 @@
 #include <fstream>
 #include "header.h"
 
-Header::Header (const std::string& filename) 
-{ 
+Header::Header (const std::string& filename)
+{
+  std::cerr << "reading header for image \"" << filename << "\"... ";
 
   if (filename.substr (filename.size()-4) != ".nii")
     throw std::string ("image should be in NIfTI format with .nii extension");
@@ -24,7 +25,7 @@ Header::Header (const std::string& filename)
   if (p_header.datatype != DT_FLOAT32)
     throw std::string ("invalid datatype for file \"") + filename + "\" (expected float32)";
 
-  disp();
+  std::cerr << "ok\n";
 }
 
 
@@ -37,7 +38,7 @@ void Header::set_ndim (int new_ndim)
 
 }
 
-void Header::disp() const 
+void Header::disp() const
 {
   std::cout << "header: [ ";
   for (int n = 0; n < ndim(); ++n)
