@@ -1,6 +1,7 @@
 #ifndef __image_h__
 #define __image_h__
 
+#include <vector>
 #include "header.h"
 
 class Image : public Header
@@ -11,8 +12,6 @@ class Image : public Header
 
     // open existing image:
     Image (const std::string& filename);
-
-    ~Image ();
 
     // write image to file:
     void save (const std::string& filename);
@@ -25,10 +24,7 @@ class Image : public Header
     }
 
   private:
-    float* p_data;
-
-    // allocate RAM for data from number of voxels reported by header:
-    void allocate ();
+    std::vector<float> p_data;
 };
 
 

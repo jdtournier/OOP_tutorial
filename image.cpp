@@ -3,8 +3,7 @@
 #include <iostream>
 #include "image.h"
 
-Image::Image (const std::string& filename) :
-  p_data (NULL)
+Image::Image (const std::string& filename)
 {
   std::cerr << "loading image \"" << filename << "\"... ";
   try {
@@ -15,10 +14,10 @@ Image::Image (const std::string& filename) :
 
     Header::read (in);
 
-    allocate();
+    p_data.resize (num_voxels(), 0.0);
 
     in.seekg (352);
-    in.read (reinterpret_cast<char*>(p_data), num_voxels()*sizeof(float));
+    in.read (reinterpret_cast<char*>(&p_data[0]), num_voxels()*sizeof(float));
     if (!in)
       throw std::string ("error reading data");
   }
@@ -33,13 +32,7 @@ Image::Image (const std::string& filename) :
 Image::Image (const Header& header)
   : Header (header)
 {
-  allocate();
-}
-
-
-Image::~Image ()
-{
-  delete [] p_data;
+  p_data.resize (num_voxels(), 0.0);
 }
 
 
@@ -54,7 +47,7 @@ void Image::save (const std::string& filename)
     Header::write (out);
     out.seekp (352);
 
-    out.write (reinterpret_cast<char*> (p_data), num_voxels()*sizeof(float));
+    out.write (reinterpret_cast<char*> (&p_data[0]), num_voxels()*sizeof(float));
     if (!out)
       throw std::string ("error writing data");
   }
@@ -63,13 +56,5 @@ void Image::save (const std::string& filename)
   }
 
   std::cerr << "ok\n";
-}
-
-
-void Image::allocate ()
-{
-  p_data = new float [num_voxels()];
-  if (!p_data)
-    throw std::string ("failed to allocate image data!");
 }
 
