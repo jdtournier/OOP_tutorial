@@ -71,7 +71,5 @@ void Image::allocate ()
   p_data = new float [num_voxels()];
   if (!p_data)
     throw std::string ("failed to allocate image data!");
-  p_data[0] = 10.0;
-  p_data[102000] = 20.0;
 }
 
