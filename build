@@ -1,6 +1,11 @@
 #!/bin/bash
 
-# termiate script on error:
+
+# set compiler executable:
+CXX=g++
+#CXX=clang++      # <== use on macOS
+
+# terminate script on error:
 set -e
 
 #######################################
@@ -22,15 +27,15 @@ function check_need_update {
 
 
 function compile {
-  echo "[CC]" g++ -Wall $cflags -c -I. "$1" -o "${1%.*}.o"
-  g++ -Wall $cflags -c -I. "$1" -o "${1%.*}.o"
+  echo "[CC]" "$CXX" -Wall $cflags -c -I. "$1" -o "${1%.*}.o"
+  "$CXX" -Wall $cflags -c -I. "$1" -o "${1%.*}.o"
 }
 
 
 
 function link {
-  echo "[LD]" g++ $cflags *.o -o "$1"
-  g++ $cflags *.o -o "$1"
+  echo "[LD]" "$CXX" $cflags *.o -o "$1"
+  "$CXX" $cflags *.o -o "$1"
 }
 
 
