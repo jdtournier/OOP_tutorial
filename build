@@ -5,6 +5,10 @@
 CXX=g++
 #CXX=clang++      # <== use on macOS
 
+
+
+
+
 # terminate script on error:
 set -e
 
@@ -12,42 +16,78 @@ set -e
 # FUNCTIONS
 #######################################
 
+function report {
+  # print to stderr:
+  >&2 echo $@
+}
+
+
+function error {
+  # print to stderr and exit:
+  >&2 echo ERROR: $@
+  exit 1
+}
+
+
 function check_need_update {
-  dest="$1"
+  # check whether target ('dest') is older than its dependencies:
+  dest=$1
+
   # target exists?
-  [ -f "$dest" ] || return 0
-  shift 1
+  [ -f $dest ] || return 0
+
   # target older than dependencies?
+  shift 1
   for n in $@; do
-    [ "$dest" -ot "$n" ] && return 0
+    [ $dest -ot $n ] && return 0
   done
+
   # target is up to date: return non-zero exit code
   return 1
 }
 
 
 function compile {
-  echo "[CC]" "$CXX" -Wall $cflags -c -I. "$1" -o "${1%.*}.o"
-  "$CXX" -Wall $cflags -c -I. "$1" -o "${1%.*}.o"
+  # compile cpp file into object
+  report "[CC]" $CXX -Wall $cflags -c -I. $1 -o ${1%.*}.o
+  $CXX -Wall $cflags -c -I. $1 -o ${1%.*}.o
 }
 
 
 
 function link {
-  echo "[LD]" "$CXX" $cflags *.o -o "$1"
-  "$CXX" $cflags *.o -o "$1"
+  # link objects into executable
+  report "[LD]" $CXX $cflags *.o -o $1
+  $CXX $cflags *.o -o $1
 }
 
 
 function get_executable_name {
-  # figure out target executable based on which cpp file contains 'main':
-  exe=( "$(grep -l 'int *main *(.*)' *.cpp )" )
-  [ ${#exe[@]} -gt 1 ] && echo "error: main() defined in multiple cpp files: "$exe[*] && exit 1
+  # figure out target executable based on which cpp file contains main():
+  exe=( $(grep -l 'int *main *(.*)' *.cpp ) )
+  [ ${#exe[@]} -lt 1 ] && error "error: main() not defined in any cpp file"
+  [ ${#exe[@]} -gt 1 ] && error "error: main() defined in multiple cpp files: "${exe[*]}
 
-  exe="${exe[*]}"
+  exe=${exe[*]}
   echo ${exe%.cpp}
 }
 
+
+function list_local_headers {
+  # list all included local headers:
+  # i.e. matching the line '#include "header.h"
+  sed -n 's/^#include *"\([^"]*\)"/\1/p' $1
+}
+
+function list_dependencies {
+  # list all dependencies of cpp or h file, including all headers recursively:
+  list=$1
+  for f in $(list_local_headers $1); do
+    list="$list $(list_dependencies $f)"
+  done
+  # sort and remove duplicates:
+  echo $1 $list | xargs -n 1 | sort | uniq | xargs
+}
 
 
 
@@ -71,8 +111,7 @@ for arg in "$@"; do
       exit 0
       ;;
     *)
-      echo "unknown argument \"$arg\""
-      exit 1
+      error "unknown argument \"$arg\""
       ;;
   esac
 done
@@ -86,13 +125,13 @@ done
 
 # compile all C++ files into objects first:
 for cpp in *.cpp; do
-  check_need_update "${cpp%.*}.o" "$cpp" && compile "$cpp"
+  check_need_update ${cpp%.*}.o $(list_dependencies $cpp) && compile $cpp
 done
 
 # guess executable name:
-target="$(get_executable_name)"
+target=$(get_executable_name)
 
 # link all objects into target:
-check_need_update "$target" *.o || exit 0
-link "$target"
+check_need_update $target *.o || exit 0
+link $target
 
