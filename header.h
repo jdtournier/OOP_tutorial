@@ -20,7 +20,7 @@ class Header
     // set the number of axes in the image:
     void set_ndim (int new_ndim);
 
-    // the number of voxesl in the image, based on ndim() & size():
+    // the number of voxels in the image, based on ndim() & size():
     unsigned long int num_voxels () const;
 
     // print information to terminal:
