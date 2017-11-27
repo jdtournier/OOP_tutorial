@@ -18,7 +18,7 @@ class Image : public Header
     void save (const std::string& filename);
 
     // get value at x,y,z,n by reference
-    // can be used for both reading and // writing
+    // can be used for both reading and writing
     float& value (int x, int y, int z, int n = 0)
     {
       return p_data[x+size(0)*(y+size(2)*(z+size(3)*n))];
