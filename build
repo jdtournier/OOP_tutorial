@@ -9,6 +9,8 @@ fi
 # termiate script on error:
 set -e
 
+cflags="-g"        # use for debugging
+#cflags="-O2"       # use for optimised executable
 
 function check_need_update {
   dest="$1"
@@ -25,15 +27,15 @@ function check_need_update {
 
 
 function compile {
-  echo "[CC]" g++ -Wall -c -I. "$1" -o "${1%.*}.o"
-  g++ -Wall -c -I. "$1" -o "${1%.*}.o"
+  echo "[CC]" g++ -Wall $cflags -c -I. "$1" -o "${1%.*}.o"
+  g++ -Wall $cflags -c -I. "$1" -o "${1%.*}.o"
 }
 
 
 
 function link {
-  echo "[LD]" g++ *.o -o "$1"
-  g++ *.o -o "$1"
+  echo "[LD]" g++ $cflags *.o -o "$1"
+  g++ $cflags *.o -o "$1"
 }
   
 
@@ -47,5 +49,6 @@ for cpp in *.cpp; do
 done
 
 # link all objects into target:
-check_need_update "$target" *.o && link "$target"
+check_need_update "$target" *.o || exit 0
+link "$target"
 
