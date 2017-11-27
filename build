@@ -1,16 +1,11 @@
 #!/bin/bash
 
-if [ $# != 1 ]; then
-  echo usage: ./build target
-  exit 1
-fi
-
-
 # termiate script on error:
 set -e
 
-cflags="-g"        # use for debugging
-#cflags="-O2"       # use for optimised executable
+#######################################
+# FUNCTIONS
+#######################################
 
 function check_need_update {
   dest="$1"
@@ -21,7 +16,7 @@ function check_need_update {
   for n in $@; do
     [ "$dest" -ot "$n" ] && return 0
   done
-  # so target is up to date
+  # target is up to date: return non-zero exit code
   return 1
 }
 
@@ -37,16 +32,60 @@ function link {
   echo "[LD]" g++ $cflags *.o -o "$1"
   g++ $cflags *.o -o "$1"
 }
-  
 
 
-# first argument is target executable:
-target="$1"
+function get_executable_name {
+  # figure out target executable based on which cpp file contains 'main':
+  exe=( "$(grep -l 'int *main *(.*)' *.cpp )" )
+  [ ${#exe[@]} -gt 1 ] && echo "error: main() defined in multiple cpp files: "$exe[*] && exit 1
+
+  exe="${exe[*]}"
+  echo ${exe%.cpp}
+}
+
+
+
+
+#######################################
+# CMDLINE PARSING
+#######################################
+
+
+# debug by default:
+cflags="-g"
+
+for arg in "$@"; do
+  case $arg in
+    "nodebug") 
+      cflags="-O2"
+      ;;
+    "clean")
+      exe="$(get_executable_name)"
+      [ -f "$exe" ] && rm -vf  "$exe"
+      rm -vf *.o
+      exit 0
+      ;;
+    *)
+      echo "unknown argument \"$arg\""
+      exit 1
+      ;;
+  esac
+done
+
+
+
+
+#######################################
+# MAIN SCRIPT
+#######################################
 
 # compile all C++ files into objects first:
 for cpp in *.cpp; do
-  check_need_update ${cpp%.*}.o $cpp && compile "$cpp"
+  check_need_update "${cpp%.*}.o" "$cpp" && compile "$cpp"
 done
+
+# guess executable name:
+target="$(get_executable_name)"
 
 # link all objects into target:
 check_need_update "$target" *.o || exit 0
