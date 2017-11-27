@@ -10,7 +10,7 @@ Image::Image (const std::string& filename)
   std::cerr << "loading image \"" << filename << "\"... ";
   allocate();
 
-  std::ifstream in (filename, std::ios::binary);
+  std::ifstream in (filename.c_str(), std::ios::binary);
   if (!in)
     throw std::string ("error opening file \"") + filename + "\"";
 
@@ -18,7 +18,7 @@ Image::Image (const std::string& filename)
 
   in.read (reinterpret_cast<char*>(p_data), num_voxels()*sizeof(float));
   if (!in)
-    throw std::string ("error reading data from file  \"") + filename + "\": " + std::strerror (errno);
+    throw std::string ("error reading data from file  \"") + filename + "\"";
 
   std::cerr << "ok\n";
 }
@@ -40,7 +40,7 @@ Image::~Image ()
 void Image::save (const std::string& filename)
 {
   std::cerr << "writing image \"" << filename << "\"... ";
-  std::ofstream out (filename, std::ios::binary);
+  std::ofstream out (filename.c_str(), std::ios::binary);
   if (!out)
     throw std::string ("error opening output file \"") + filename + "\"";
 

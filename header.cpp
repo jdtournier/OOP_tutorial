@@ -9,7 +9,7 @@ Header::Header (const std::string& filename)
   if (filename.substr (filename.size()-4) != ".nii")
     throw std::string ("image should be in NIfTI format with .nii extension");
 
-  std::ifstream in (filename, std::ios::binary);
+  std::ifstream in (filename.c_str(), std::ios::binary);
   if (!in)
     throw std::string ("error opening file \"") + filename + "\"";
 
