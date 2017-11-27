@@ -41,8 +41,8 @@ function link {
 # first argument is target executable:
 target="$1"
 
-# compile all C/C++ files into objects first:
-for cpp in *.cpp *.c; do
+# compile all C++ files into objects first:
+for cpp in *.cpp; do
   check_need_update ${cpp%.*}.o $cpp && compile "$cpp"
 done
 
