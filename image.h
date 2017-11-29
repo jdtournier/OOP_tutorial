@@ -20,7 +20,7 @@ class Image : public Header
     // can be used for both reading and writing
     float& value (int x, int y, int z, int n = 0)
     {
-      return p_data[x+size(0)*(y+size(2)*(z+size(3)*n))];
+      return p_data[x+size(0)*(y+size(1)*(z+size(2)*n))];
     }
 
   private:

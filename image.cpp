@@ -14,7 +14,7 @@ Image::Image (const std::string& filename)
 
     Header::read (in);
 
-    p_data.resize (num_voxels(), 0.0);
+    p_data.resize (num_voxels());
 
     in.seekg (352);
     in.read (reinterpret_cast<char*>(&p_data[0]), num_voxels()*sizeof(float));
