@@ -1,16 +1,99 @@
 #!/bin/bash
 
+function usage {
+  cat <<'EOD'
+
+This is a no-frills script to compile and link small C++ projects. It emulates
+what a Makefile might do, based on simple assumptions:
+
+- all files have a `.cpp` or `.h` suffix
+
+- all files reside in a flat structure in the same folder
+
+- *user* headers are `#include`d in inverted commas, while *system* headers are
+  `#include`d in angled brackets, i.e. like this:
+
+        // when working out dependencies:
+        #include "my_header.h"   // <- user header: will be inspected
+        #include <iostream>      // <- system header: will be ignored
+
+  This is important if the script is to work out dependencies correctly: it will
+  scan through all *user* headers recursively to work out whether each object is
+  up to date relative to the headers it depends on, but ignore all *system*
+  headers.
+
+#### Invoking the build script
+
+Make sure your working directory is the folder containing the `build` script
+and your code, then simply type `./build`.
+
+The build script also accepts these special arguments:
+
+- `help`: print this help page
+- `clean`: remove all generated files (the executable and all objects).
+- `debug`: create code suitable for debugging (best to run `./build clean`
+  beforehand to clear out any optimised temporaries).
+- `verbose`: print out additional information about what the script is doing,
+  including the executables detected, each intermediate file's dependencies,
+  whether why each file needs to be updated, and why.
+
+#### Customising the build
+
+If you need to override the default settings (compiler executable, provide
+non-default or additional include locations, etc), place those settings in the
+`settings.sh` file. An example such file is provided in the
+`settings_example.sh`; you can simply copy this file and name it `settings.sh`,
+modify as required, and invoke `./build` again.
+
+EOD
+}
+
+
+
+
+
+
+#######################################
+# DEFAULT SETTINGS:
+#######################################
 
 # set compiler executable:
 CXX=g++
-#CXX=clang++      # <== use on macOS
+
+
+cflags=""
+ldflags=""
+
+# compiler flags used for optimised build:
+cflags_optim="-O3 -DNDEBUG"
+ldflags_optim=""
+
+# compiler flags used for debug build:
+cflags_debug="-g"
+ldflags_debug="-g"
+
+# command to run to display compiler output on error:
+display_error="less -X"
 
 
 
-
+#######################################
+# START OF SCRIPT PROPER:
+#######################################
 
 # terminate script on error:
 set -e
+
+verbose=0
+
+# load user-specific defaults if present:
+if [ -f settings.sh ]; then
+  . settings.sh
+fi
+
+rm -f build_error.txt
+
+
 
 #######################################
 # FUNCTIONS
@@ -28,20 +111,35 @@ function error {
   exit 1
 }
 
+function debug {
+  if [ ! $verbose -eq 0 ]; then
+    report '#' $@
+  fi
+}
+
 
 function check_need_update {
   # check whether target ('dest') is older than its dependencies:
   dest=$1
+  shift 1
+
+  debug $dest depends on $@
 
   # target exists?
-  [ -f $dest ] || return 0
+  if [ ! -f $dest ]; then
+    debug $dest does not exist - needs update
+    return 0
+  fi
 
   # target older than dependencies?
-  shift 1
   for n in $@; do
-    [ $dest -ot $n ] && return 0
+    if [ $dest -ot $n ]; then
+      debug $dest is older than dependency $n - needs update
+      return 0
+    fi
   done
 
+  debug $dest is already up to date
   # target is up to date: return non-zero exit code
   return 1
 }
@@ -49,34 +147,55 @@ function check_need_update {
 
 function compile {
   # compile cpp file into object
-  report "[CC]" $CXX -Wall $cflags -c -I. $1 -o ${1%.*}.o
-  $CXX -Wall $cflags -c -I. $1 -o ${1%.*}.o
+  cmd="$CXX $cflags -c $1 -o ${1%.*}.o"
+  report "[CC]" $cmd
+  if ! $cmd 2> build_error.txt ; then
+    $display_error build_error.txt
+    return 1
+  fi
 }
 
 
 
 function link {
   # link objects into executable
-  report "[LD]" $CXX $cflags *.o -o $1
-  $CXX $cflags *.o -o $1
+  exe=$1
+  shift
+  cmd="$CXX $ldflags $@ -o $exe"
+  report "[LD]" $cmd
+  if ! $cmd 2> build_error.txt ; then
+    $display_error build_error.txt
+    return 1
+  fi
 }
 
 
-function get_executable_name {
+function get_executable_names {
   # figure out target executable based on which cpp file contains main():
   exe=( $(grep -l 'int *main *(.*)' *.cpp ) )
-  [ ${#exe[@]} -lt 1 ] && error "error: main() not defined in any cpp file"
-  [ ${#exe[@]} -gt 1 ] && error "error: main() defined in multiple cpp files: "${exe[*]}
+  [ ${#exe[@]} -lt 1 ] && report "WARNING: main() not defined in any cpp file - no executables will be generated"
 
-  exe=${exe[*]}
-  echo ${exe%.cpp}
+  for f in ${exe[@]}; do
+    echo -n "${f%.cpp} "
+  done
+  echo ""
 }
+
+contains() {
+  tocheck=$1
+  shift
+  for entry in $@; do
+    [ $entry == $tocheck ] && return 0
+  done
+  return 1
+}
+
 
 
 function list_local_headers {
   # list all included local headers:
   # i.e. matching the line '#include "header.h"
-  sed -n 's/^#include *"\([^"]*\)"/\1/p' $1
+  sed -n 's/^#include *"\([^"]*\)".*$/\1/p' $1
 }
 
 function list_dependencies {
@@ -95,20 +214,26 @@ function list_dependencies {
 # CMDLINE PARSING
 #######################################
 
-
-# debug by default:
-cflags="-g"
-
 for arg in "$@"; do
   case $arg in
-    "nodebug") 
-      cflags="-O2"
+    "help")
+      usage
+      exit 0
+      ;;
+    "debug")
+      cflags_optim="$cflags_debug"
+      ldflags_optim="$ldflags_debug"
       ;;
     "clean")
-      exe="$(get_executable_name)"
-      [ -f "$exe" ] && rm -vf  "$exe"
+      exe="$(get_executable_names)"
+      for f in $exe; do
+        [ -f $f ] && rm -vf $f
+      done
       rm -vf *.o
       exit 0
+      ;;
+    "verbose")
+      verbose=1
       ;;
     *)
       error "unknown argument \"$arg\""
@@ -116,22 +241,41 @@ for arg in "$@"; do
   esac
 done
 
+cflags="$cflags $cflags_optim"
+ldflags="$ldflags $ldflags_optim"
 
+
+if ! ls *.cpp >/dev/null 2>&1; then
+  cat <<'EOD'
+
+ERROR: no *.cpp files found in current folder!
+
+Type `./build help` for detailed usage
+
+EOD
+  exit 1
+fi
 
 
 #######################################
 # MAIN SCRIPT
 #######################################
 
+# guess executable names:
+targets=$(get_executable_names)
+debug target executables detected: $targets
+
 # compile all C++ files into objects first:
 for cpp in *.cpp; do
   check_need_update ${cpp%.*}.o $(list_dependencies $cpp) && compile $cpp
 done
 
-# guess executable name:
-target=$(get_executable_name)
+objects=""
+for obj in *.o; do
+  contains ${obj%.o} $targets || objects="$objects $obj"
+done
 
-# link all objects into target:
-check_need_update $target *.o || exit 0
-link $target
-
+# link all objects into targets:
+for exe in $targets; do
+  check_need_update $exe ${exe}.o $objects && link $exe ${exe}.o $objects
+done
