@@ -198,14 +198,30 @@ function list_local_headers {
   sed -n 's/^#include *"\([^"]*\)".*$/\1/p' $1
 }
 
+
+
+
+function remove_duplicates {
+  for a in $2; do
+    skip=0
+    for b in $1; do
+      [ $a == $b ] && skip=1
+   done
+   [ $skip == 0 ] && echo $a
+  done
+}
+
 function list_dependencies {
   # list all dependencies of cpp or h file, including all headers recursively:
-  list=$1
-  for f in $(list_local_headers $1); do
-    list="$list $(list_dependencies $f)"
+  list="$@"
+  headers=$(remove_duplicates "$list" "$(list_local_headers $1)")
+
+
+  for f in $headers; do
+    list="$(list_dependencies $f $list)"
   done
   # sort and remove duplicates:
-  echo $1 $list | xargs -n 1 | sort | uniq | xargs
+  echo $list | xargs -n 1 | sort | uniq | xargs
 }
 
 
