@@ -221,7 +221,7 @@ function list_dependencies {
     list="$(list_dependencies $f $list)"
   done
   # sort and remove duplicates:
-  echo $list | xargs -n 1 | sort | uniq | xargs
+  echo $list 
 }
 
 
