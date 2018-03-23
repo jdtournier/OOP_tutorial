@@ -203,11 +203,7 @@ function list_local_headers {
 
 function remove_duplicates {
   for a in $2; do
-    skip=0
-    for b in $1; do
-      [ $a == $b ] && skip=1
-   done
-   [ $skip == 0 ] && echo $a
+    contains $a $1 || echo $a
   done
 }
 
