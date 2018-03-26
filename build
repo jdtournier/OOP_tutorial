@@ -48,18 +48,12 @@ modify as required, and invoke `./build` again.
 EOD
 }
 
-
-
-
-
-
 #######################################
 # DEFAULT SETTINGS:
 #######################################
 
 # set compiler executable:
 CXX=g++
-
 
 cflags=""
 ldflags=""
@@ -74,8 +68,6 @@ ldflags_debug="-g"
 
 # command to run to display compiler output on error:
 display_error="less -X"
-
-
 
 #######################################
 # START OF SCRIPT PROPER:
@@ -93,8 +85,6 @@ fi
 
 rm -f build_error.txt
 
-
-
 #######################################
 # FUNCTIONS
 #######################################
@@ -103,7 +93,6 @@ function report {
   # print to stderr:
   >&2 echo $@
 }
-
 
 function error {
   # print to stderr and exit:
@@ -116,7 +105,6 @@ function debug {
     report '#' $@
   fi
 }
-
 
 function check_need_update {
   # check whether target ('dest') is older than its dependencies:
@@ -144,7 +132,6 @@ function check_need_update {
   return 1
 }
 
-
 function compile {
   # compile cpp file into object
   cmd="$CXX $cflags -c $1 -o ${1%.*}.o"
@@ -154,8 +141,6 @@ function compile {
     return 1
   fi
 }
-
-
 
 function link {
   # link objects into executable
@@ -169,10 +154,9 @@ function link {
   fi
 }
 
-
 function get_executable_names {
   # figure out target executable based on which cpp file contains main():
-  exe=( $(grep -l 'int *main *(.*)' *.cpp ) )
+  exe=( $(grep -lE '\<int\s+main\s*\([^)]*\)' *.cpp ) )
   [ ${#exe[@]} -lt 1 ] && report "WARNING: main() not defined in any cpp file - no executables will be generated"
 
   for f in ${exe[@]}; do
@@ -190,37 +174,29 @@ contains() {
   return 1
 }
 
-
-
 function list_local_headers {
   # list all included local headers:
-  # i.e. matching the line '#include "header.h"
-  sed -n 's/^#include *"\([^"]*\)".*$/\1/p' $1
+  # i.e. matching the line `#include "header.h"`
+  #debug list_local_headers $1
+  sed -rn 's/^#include[\t ]*"([^"]+)"/\1/p' $1 | sort -u
 }
 
-
-
-
-function remove_duplicates {
+function set_difference {
+  # return set($2).difference($1)
   for a in $2; do
     contains $a $1 || echo $a
-  done
+  done | sort -u
 }
 
 function list_dependencies {
   # list all dependencies of cpp or h file, including all headers recursively:
   list="$@"
-  headers=$(remove_duplicates "$list" "$(list_local_headers $1)")
 
-
-  for f in $headers; do
+  for f in $(set_difference "$list" "$(list_local_headers $1)"); do
     list="$(list_dependencies $f $list)"
   done
-  # sort and remove duplicates:
-  echo $list 
+  echo $list
 }
-
-
 
 #######################################
 # CMDLINE PARSING
@@ -256,7 +232,6 @@ done
 cflags="$cflags $cflags_optim"
 ldflags="$ldflags $ldflags_optim"
 
-
 if ! ls *.cpp >/dev/null 2>&1; then
   cat <<'EOD'
 
@@ -267,7 +242,6 @@ Type `./build help` for detailed usage
 EOD
   exit 1
 fi
-
 
 #######################################
 # MAIN SCRIPT
