@@ -35,7 +35,7 @@ The build script also accepts these special arguments:
   beforehand to clear out any optimised temporaries).
 - `verbose`: print out additional information about what the script is doing,
   including the executables detected, each intermediate file's dependencies,
-  whether why each file needs to be updated, and why.
+  whether each file needs to be updated, and why.
 
 #### Customising the build
 
